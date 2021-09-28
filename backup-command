@@ -16,21 +16,21 @@ check-vars() {
 mkdir -p /config/rclone
 touch /config/rclone/rclone.conf
 
-check-vars "for backup" SPARROW_LAB_ID || exit 1
+check-vars "for backup" DB_BACKUP_PREFIX || exit 1
 
 now="$(date +%Y-%m-%d:%H:%M:%S)"
 
-backup_name="$SPARROW_LAB_ID-$now.pg-dump"
+backup_name="$DB_BACKUP_PREFIX-$now.pg-dump"
 dbname=Sparrow
 
-# We mount local SPARROW_BACKUP_DIR as 
-if check_vars "local backup" SPARROW_BACKUP_DIR ; then
+# We mount local DB_BACKUP_DIR as 
+if check_vars "local backup" DB_BACKUP_DIR ; then
   # Back up to the local directory
   # Dump the database. Files always change, unfortunately.
   # Add an extra variable to be more specific about the mounted directory 
-  export SPARROW_BACKUP_VOLUME=${SPARROW_BACKUP_VOLUME:-"$SPARROW_BACKUP_DIR"}
+  export DB_BACKUP_VOLUME=${DB_BACKUP_VOLUME:-"$DB_BACKUP_DIR"}
 
-  dumpfile="$SPARROW_BACKUP_VOLUME"/$backup_name
+  dumpfile="$DB_BACKUP_VOLUME"/$backup_name
   echo "Backing up $dbname to $dumpfile"
   pg_dump -h database -p 5432 -Fc -C -Upostgres -f $dumpfile $dbname
   ls -sh $dumpfile
@@ -40,17 +40,19 @@ fi
 # Rest of the script is for backing up to a server...
 
 check-vars "cloud backup" \
-  SPARROW_S3_ENDPOINT SPARROW_S3_KEY \
-  SPARROW_S3_SECRET SPARROW_BACKUP_BUCKET \
+  S3_ENDPOINT \
+  S3_KEY \
+  S3_SECRET \
+  DB_BACKUP_BUCKET \
 || exit 1
 
 # Set RClone configuration values
 export RCLONE_CONFIG_REMOTE_TYPE=s3
-export RCLONE_CONFIG_REMOTE_ENDPOINT=${SPARROW_S3_ENDPOINT}
-export RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${SPARROW_S3_KEY}
-export RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${SPARROW_S3_SECRET}
+export RCLONE_CONFIG_REMOTE_ENDPOINT=${S3_ENDPOINT}
+export RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${S3_KEY}
+export RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${S3_SECRET}
 
-remote=remote:$SPARROW_BACKUP_BUCKET
+remote=remote:$DB_BACKUP_BUCKET
 list=/tmp/bucket-list
 
 
@@ -71,7 +73,7 @@ latest_file=$(cat $list | tail -n 1)
 
 # Dump the database. Files always change, unfortunately.
 echo "Backing up $dbname to $dumpfile"
-pg_dump -h database -p 5432 -Fc -C -Upostgres -f $dumpfile $dbname
+pg_dump -h $DB_HOST -p $DB_PORT -Fc -C -U$DB_USER -f $dumpfile $dbname
 ls -sh $dumpfile
 echo ""
 
