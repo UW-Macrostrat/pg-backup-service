@@ -23,7 +23,7 @@ now="$(date +%Y-%m-%d:%H:%M:%S)"
 backup_name="${DB_BACKUP_PREFIX:-$DB_NAME}-$now.pg-dump"
 dbname="$DB_NAME"
 
-function backup-db() {
+function _backup_db() {
   dumpfile="$2"
   echo "Backing up $dbname to $dumpfile"
   pg_dump -h ${DB_HOST:-localhost} -p ${DB_PORT:-5432} -Fc -C -U${DB_USER:-postgres} -f $dumpfile $dbname
@@ -40,7 +40,7 @@ if check_vars "local backup" DB_BACKUP_DIR ; then
   export DB_BACKUP_VOLUME=${DB_BACKUP_VOLUME:-"$DB_BACKUP_DIR"}
 
   dumpfile="$DB_BACKUP_VOLUME/$backup_name"
-  backup-db "$dumpfile"
+  _backup_db "$dumpfile"
   did_something=true
 fi
 
@@ -79,7 +79,7 @@ if check-vars "cloud backup" \
 
   # Dump the database if it hasn't already been dumped
   if [ ! -f "$dumpfile" ]; then
-    backup-db "$dumpfile"
+    _backup_db "$dumpfile"
   fi
 
   echo "Uploading to $remote_dump"
