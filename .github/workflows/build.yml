@@ -6,7 +6,8 @@
 name: Build and publish
 on:
   push:
-    branches: ['release']
+    branches: ['main']
+  pull_request:
 
 env:
   REGISTRY: ghcr.io
