@@ -81,7 +81,7 @@ echo "Uploading to $remote_dump"
 rclone copy $dumpfile $remote
 
 # Prune oldest backup if there are many
-max_n=20
+max_n=${DB_BACKUP_MAX_N:-10}
 if [ $nfiles -gt $max_n ]; then
   echo "More than $max_n backups available."
   echo "Pruning the oldest ($oldest_file)."
