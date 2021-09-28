@@ -16,13 +16,22 @@ check-vars() {
 mkdir -p /config/rclone
 touch /config/rclone/rclone.conf
 
-check-vars "for backup" DB_BACKUP_PREFIX || exit 1
+check-vars "for backup" DB_BACKUP_ID || exit 1
 
 now="$(date +%Y-%m-%d:%H:%M:%S)"
 
-backup_name="$DB_BACKUP_PREFIX-$now.pg-dump"
-dbname=Sparrow
+backup_name="$DB_BACKUP_ID-$now.pg-dump"
+dbname="$DB_NAME"
 
+function backup-db() {
+  dumpfile="$2"
+  echo "Backing up $dbname to $dumpfile"
+  pg_dump -h $DB_HOST -p $DB_PORT -Fc -C -U$DB_USER -f $dumpfile $dbname
+  ls -sh $dumpfile
+  echo ""
+}
+
+did_something=false
 # We mount local DB_BACKUP_DIR as 
 if check_vars "local backup" DB_BACKUP_DIR ; then
   # Back up to the local directory
@@ -30,62 +39,67 @@ if check_vars "local backup" DB_BACKUP_DIR ; then
   # Add an extra variable to be more specific about the mounted directory 
   export DB_BACKUP_VOLUME=${DB_BACKUP_VOLUME:-"$DB_BACKUP_DIR"}
 
-  dumpfile="$DB_BACKUP_VOLUME"/$backup_name
-  echo "Backing up $dbname to $dumpfile"
-  pg_dump -h database -p 5432 -Fc -C -Upostgres -f $dumpfile $dbname
-  ls -sh $dumpfile
-  echo ""
+  dumpfile="$DB_BACKUP_VOLUME/$backup_name"
+  backup-db "$dumpfile"
+  did_something=true
 fi
 
 # Rest of the script is for backing up to a server...
 
-check-vars "cloud backup" \
+if check-vars "cloud backup" \
   S3_ENDPOINT \
   S3_KEY \
   S3_SECRET \
-  DB_BACKUP_BUCKET \
-|| exit 1
+  DB_BACKUP_BUCKET ; then
 
-# Set RClone configuration values
-export RCLONE_CONFIG_REMOTE_TYPE=s3
-export RCLONE_CONFIG_REMOTE_ENDPOINT=${S3_ENDPOINT}
-export RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${S3_KEY}
-export RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${S3_SECRET}
+  # Set RClone configuration values
+  export RCLONE_CONFIG_REMOTE_TYPE=s3
+  export RCLONE_CONFIG_REMOTE_ENDPOINT=${S3_ENDPOINT}
+  export RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${S3_KEY}
+  export RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${S3_SECRET}
 
-remote=remote:$DB_BACKUP_BUCKET
-list=/tmp/bucket-list
-
-
-dumpfile=/tmp/$backup_name
-remote_dump=$remote/$backup_name
-
-rclone ls $remote | sed 's/.* //g' > $list
-
-nfiles=$(cat $list | wc -l)
-
-echo "Existing backups:"
-cat $list
-echo ""
-
-oldest_file=$(cat $list | head -n 1)
-latest_file=$(cat $list | tail -n 1)
+  remote=remote:$DB_BACKUP_BUCKET
+  list=/tmp/bucket-list
 
 
-# Dump the database. Files always change, unfortunately.
-echo "Backing up $dbname to $dumpfile"
-pg_dump -h $DB_HOST -p $DB_PORT -Fc -C -U$DB_USER -f $dumpfile $dbname
-ls -sh $dumpfile
-echo ""
+  dumpfile=${dumpfile:-/tmp/$backup_name}
+  remote_dump=$remote/$backup_name
 
-echo "Uploading to $remote_dump"
-rclone copy $dumpfile $remote
+  rclone ls $remote | sed 's/.* //g' > $list
 
-# Prune oldest backup if there are many
-max_n=${DB_BACKUP_MAX_N:-10}
-if [ $nfiles -gt $max_n ]; then
-  echo "More than $max_n backups available."
-  echo "Pruning the oldest ($oldest_file)."
-  rclone deletefile $remote/$oldest_file
+  nfiles=$(cat $list | wc -l)
+
+  echo "Existing backups:"
+  cat $list
+  echo ""
+
+  oldest_file=$(cat $list | head -n 1)
+  latest_file=$(cat $list | tail -n 1)
+
+
+  # Dump the database if it hasn't already been dumped
+  if [ ! -f "$dumpfile" ]; then
+    backup-db "$dumpfile"
+  fi
+
+  echo "Uploading to $remote_dump"
+  rclone copy $dumpfile $remote
+
+  # Prune oldest backup if there are many
+  max_n=${DB_BACKUP_MAX_N:-10}
+  if [ $nfiles -gt $max_n ]; then
+    echo "More than $max_n backups available."
+    echo "Pruning the oldest ($oldest_file)."
+    rclone deletefile $remote/$oldest_file
+  fi
+
+  rm -f $list
+  rm -rf /tmp/*
+
+  did_something=true
 fi
 
-rm -f $list $dumpfile
+if [ "$did_something" = false ]; then
+  echo "Insufficient information specified for local or S3 backup."
+  exit 1
+fi
