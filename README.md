@@ -55,6 +55,11 @@ docker run \
 
 The backup service creates custom-format PostgreSQL dump files.
 These can be restored with a command like
+```
+pg_restore -U $DB_USER -p $DB_PORT -d $DB_NAME "$backup_file_name"
+```
+A built-in restore command may be provided in a future
+version of this image.
 
 
 ## Limitations
