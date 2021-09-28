@@ -2,6 +2,6 @@ FROM rclone/rclone
 
 RUN apk --update add --no-cache postgresql-client
 
-COPY ./ /conf/
+COPY ./backup-db ./backup-service /usr/local/bin/
 
-ENTRYPOINT /conf/backup-command
+CMD [ "backup-service" ]
