@@ -6,7 +6,7 @@ sleep 3600
 
 while true; do
   echo "Backing up database."
-  /conf/backup-command
+  backup-db
   # Run once a week by default
   sleep ${DB_BACKUP_INTERVAL:-604800}
 done
