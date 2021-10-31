@@ -2,20 +2,34 @@
 # Mock an S3 server
 
 export COMPOSE_FILE="docker-compose.test.yaml"
+export S3_BACKUP_BUCKET="test-bucket"
 
-docker compose build
-docker compose up -d
+docker compose up --build --remove-orphans --force-recreate -d
 
 while ! docker compose exec db_server pg_isready ; do
   echo "Waiting for PostgreSQL server to be ready..."
   sleep 1
 done
 
-docker compose exec db_server psql -U postgres -p 5432 test_database -c \
+docker compose exec db_server createdb test_database
+
+docker compose exec db_server psql -p 5432 test_database -c \
 "CREATE TABLE test_table (id serial PRIMARY KEY, name text); \
 INSERT INTO test_table (name) VALUES ('test');"
 
 echo "Created test database"
 
 docker compose run db_backup backup-db
+
+file_list=$(docker compose exec storage ls /data/test-bucket)
+
+docker compose down
 docker compose rm -f --volumes
+
+if [ -z "$file_list" ]; then
+  echo "No files found in S3 bucket"
+  exit 1
+else
+  echo $file_list
+  echo "Backup file saved successfully!"
+fi
