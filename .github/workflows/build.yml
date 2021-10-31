@@ -23,6 +23,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Run tests
+        run: ./test-backup
+
       - name: Log in to the Container registry
         uses: docker/login-action@v1
         with:

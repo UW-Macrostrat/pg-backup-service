@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Mock an S3 server
+
+# A test suite for database backup scripts
+# TODO: we might want to rewrite this in python for clarity and added features.
+# But the current shell version is fine for now.
 
 export COMPOSE_FILE="docker-compose.test.yaml"
 export S3_BACKUP_BUCKET="test-bucket"
@@ -18,6 +21,8 @@ docker compose exec db_server psql -p 5432 test_database -c \
 INSERT INTO test_table (name) VALUES ('test');"
 
 echo "Created test database"
+
+echo "-> Testing basic backup"
 
 docker compose run db_backup backup-db
 
