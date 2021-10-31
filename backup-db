@@ -5,6 +5,7 @@ check-vars() {
   reason="$1"
   shift
   var_names=("$@")
+  var_unset=""
   for var_name in "${var_names[@]}"; do
     [ -z "${!var_name}" ] && echo "$var_name is required $reason." && var_unset=true
   done
@@ -24,7 +25,7 @@ backup_name="${DB_BACKUP_PREFIX:-$DB_NAME}-$now.pg-dump"
 dbname="$DB_NAME"
 
 function _backup_db() {
-  dumpfile="$2"
+  dumpfile="$1"
   echo "Backing up $dbname to $dumpfile"
   pg_dump -h ${DB_HOST:-localhost} -p ${DB_PORT:-5432} -Fc -C -U${DB_USER:-postgres} -f $dumpfile $dbname
   ls -sh $dumpfile
@@ -33,7 +34,7 @@ function _backup_db() {
 
 did_something=false
 # We mount local DB_BACKUP_DIR as 
-if check_vars "local backup" DB_BACKUP_DIR ; then
+if check-vars "local backup" DB_BACKUP_DIR ; then
   # Back up to the local directory
   # Dump the database. Files always change, unfortunately.
   # Add an extra variable to be more specific about the mounted directory 
@@ -58,6 +59,8 @@ if check-vars "cloud backup" \
   export RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${S3_ACCESS_KEY}
   export RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
 
+  echo "Running cloud backup"
+
   remote=remote:$S3_BACKUP_BUCKET
   list=/tmp/bucket-list
 
@@ -66,6 +69,8 @@ if check-vars "cloud backup" \
   remote_dump=$remote/$backup_name
 
   rclone ls $remote | sed 's/.* //g' > $list
+
+  echo "Finding dump"
 
   nfiles=$(cat $list | wc -l)
 
