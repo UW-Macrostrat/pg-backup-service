@@ -1,45 +1,21 @@
 #!/usr/bin/env bash
 # Mock an S3 server
 
-docker build -t test_db_backup .
+export COMPOSE_FILE="docker-compose.test.yaml"
 
-key=test_admin
+docker compose build
+docker compose up -d
 
-docker network create --driver bridge test-net
+while ! docker compose exec db_server pg_isready ; do
+  echo "Waiting for PostgreSQL server to be ready..."
+  sleep 1
+done
 
-# Run a s3-compatible object storage server
-docker run -d -p 9000:9000 --network test-net \
-  --name s3_server \
-  -e "MINIO_ACCESS_KEY=$key" \
-  -e "MINIO_SECRET_KEY=$key" \
-  minio/minio server /data
-
-# Run a database server
-docker run -d \
-  --network test-net \
-  --name db_server \
-  -p 5432:5432 \
-  -e "POSTGRES_DB=test_database" \
- postgres
-
-sleep 5
-
-docker exec db_server psql test_database -c \
+docker compose exec db_server psql -U postgres -p 5432 test_database -c \
 "CREATE TABLE test_table (id serial PRIMARY KEY, name text); \
 INSERT INTO test_table (name) VALUES ('test');"
 
-docker run \
-  -e S3_ENDPOINT=http://s3_server:9000 \
-  -e S3_ACCESS_KEY=$key \
-  -e S3_SECRET_KEY=$key \
-  -e S3_BACKUP_BUCKET=test_backup \
-  -e DB_NAME=test_database \
-  -e DB_HOST=db_server \
-  --network test-net \
-  test_db_backup \
-  backup-db
+echo "Created test database"
 
-docker stop s3_server db_server
-docker rm s3_server db_server
-
-docker network rm test-net
+docker compose run db_backup backup-db
+docker compose rm -f --volumes
