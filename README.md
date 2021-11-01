@@ -22,8 +22,14 @@ with the appropriate environment variables.
 ### Database connection
 
 - `DB_NAME`: The name of the database to back up (**Required**).
-- `DB_HOST` (default: `localhost`)
-- `DB_PORT` (default: `5432`)
+
+Other common [PostgreSQL connection variables](https://www.postgresql.org/docs/current/libpq-envars.html)
+are also supported, such as:
+
+- `PGHOST` (default: `localhost`)
+- `PGPORT` (default: `5432`)
+- `PGUSER` (default: `postgres`)
+- `PGPASSWORD` (no default)
 
 ### Local backup
 
