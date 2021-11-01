@@ -27,10 +27,10 @@ function run-backup() {
     >&2 dump-database "$dbname" "$dumpfile"
   else
     if [ -z $PGDUMP_OPTIONS ]; then
-      >&2 echo "No 'dump-$dbname' or 'dump-database' command found, using pg_dump"
+      >&2 echo "No 'dump-$dbname' or 'dump-database' command found, using pg_dump -Fc"
       >&2 pg_dump -Fc "$dbname" > "$dumpfile"
     else
-      >&2 echo "No 'dump-$dbname' or 'dump-database' command found, using pg_dump with options $PGDUMP_OPTIONS"
+      >&2 echo "No 'dump-$dbname' or 'dump-database' command found, using pg_dump -Fc with options $PGDUMP_OPTIONS"
       >&2 pg_dump -Fc $PGDUMP_OPTIONS "$dbname" > "$dumpfile"
     fi
   fi
