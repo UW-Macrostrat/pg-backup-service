@@ -2,15 +2,9 @@
 
 source defs.bash
 
-## Get rid of pesky stderr message
-mkdir -p /config/rclone
-touch /config/rclone/rclone.conf
-
 check-vars "for backup" DB_NAME || exit 1
 
-now="$(date +%Y-%m-%d:%H:%M:%S)"
-
-backup_dir="$DB_NAME"
+backup_dir=""
 if [ -n "$DB_BACKUP_PREFIX" ]; then
   backup_dir="$DB_BACKUP_PREFIX/"
 fi
@@ -80,7 +74,7 @@ if check-vars "cloud backup" \
   if [ $nfiles -gt $max_n ]; then
     echo "More than $max_n backups available."
     echo "Pruning the oldest ($oldest_file)."
-    run-rclone deletefile $remote/$oldest_file
+    remove-remote-backup $oldest_file
   fi
 
   rm -f $list
