@@ -103,3 +103,10 @@ Any contributions should add appropriate tests and documentation.
   times of the day.
 - A built-in command to restore from a backup (possibly with an interactive prompt).
 - Possibly shift to Python from shell scripts.
+
+# Prior art and useful links
+
+- [Sparrow](https://sparrow-data.org)
+- [pg_dump](https://www.postgresql.org/docs/current/app-pgdump.html)
+- [Rclone](https://rclone.org)
+- [`postgres-backup-s3`](https://github.com/schickling/dockerfiles/tree/master/postgres-backup-s3)

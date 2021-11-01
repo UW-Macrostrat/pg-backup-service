@@ -1,12 +1,11 @@
 #!/bin/sh
 
-# Allow the database to come up properly
-# NOTE: we could be better about how we do this...
-sleep 3600
+set -eo pipefail
 
-while true; do
-  echo "Backing up database."
+if [ -z "${SCHEDULE}" ]; then
+  echo "SCHEDULE environment variable is not set"
+  echo "Performing a one-off backup"
   backup-db
-  # Run once a week by default
-  sleep ${DB_BACKUP_INTERVAL:-604800}
-done
+else
+  exec go-cron "$SCHEDULE" backup-db
+fi
