@@ -6,6 +6,9 @@
 
 export COMPOSE_FILE="docker-compose.test.yaml"
 
+source bin/defs.bash
+
+
 run-test() {
   echo ""
   echo -e "\033[1mTesting $1\033[0m"
@@ -53,7 +56,9 @@ run-test "basic backup"
 
 docker compose run db_backup backup-db
 
-file_list=$(docker compose exec storage ls /data/test-bucket)
+docker compose exec storage ls /data/test-bucket
+
+file_list=$(docker compose exec storage ls /data/test-bucket/$DB_BACKUP_PREFIX)
 
 # Test that a backup file was created
 if [ -z "$file_list" ]; then
@@ -74,7 +79,7 @@ fi
 
 run-test "correct prefix"
 
-prefix="$DB_BACKUP_PREFIX-$DB_NAME"
+prefix="$DB_BACKUP_PREFIX/$DB_NAME"
 if [[ ! $file_list == "$prefix-"* ]]; then
   echo "Backup file name does not match expected format."
   exit 1

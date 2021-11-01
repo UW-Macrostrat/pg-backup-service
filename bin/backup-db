@@ -12,7 +12,7 @@ now="$(date +%Y-%m-%d:%H:%M:%S)"
 
 prefix="$DB_NAME"
 if [ -n "$DB_BACKUP_PREFIX" ]; then
-  prefix="$DB_BACKUP_PREFIX-$DB_NAME"
+  prefix="$DB_BACKUP_PREFIX/$DB_NAME"
 fi
 
 backup_name="$prefix-$now.pg-dump"

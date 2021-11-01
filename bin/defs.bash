@@ -1,4 +1,4 @@
-check-vars() {
+function check-vars() {
   # Check whether an environment variable exists
   reason="$1"
   shift
@@ -16,7 +16,14 @@ function _backup_db() {
   dbname="$1"
   dumpfile="$2"
   echo "Backing up $dbname to $dumpfile"
+  mkdir -p "$(dirname "$dumpfile")"
   pg_dump -f $dumpfile $dbname
   ls -sh $dumpfile
   echo ""
 }
+
+# function count-backups() {
+#   # Count the number of backups
+#   dbname="$1"
+#   backup_dir="$2"
+# }

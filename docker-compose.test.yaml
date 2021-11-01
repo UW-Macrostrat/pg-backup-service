@@ -14,6 +14,8 @@ services:
     environment:
       - MINIO_ACCESS_KEY=test
       - MINIO_SECRET_KEY=test_secret
+    volumes:
+      - data:/data
   db_backup:
     build: .
     command: "echo"
@@ -25,3 +27,5 @@ services:
       - DB_BACKUP_PREFIX
       - DB_NAME
       - PGHOST=db_server
+volumes:
+  data:
