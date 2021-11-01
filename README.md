@@ -1,6 +1,8 @@
+# Macrostrat database backup service
+
 Macrostrat's database backup service enables on-demand and periodic backups of
 PostgreSQL databases to local directories and remote S3 buckets. The service
-is designed to be run in a standalone Docker container, and is thus configured
+is designed to be run in a standalone Docker container, and is typically configured
 with environment variables.
 
 It is based on [pg_dump](https://www.postgresql.org/docs/current/app-pgdump.html)
@@ -23,6 +25,7 @@ Backups are named using an optional prefix, the database name, a 10-character fi
 $DB_BACKUP_PREFIX/$dbname-5e753082e5-2021-11-01:20:51:55.pg-dump
 ```
 
+# Usage
 ## Environment variables
 
 The application is configured with environment variables, allowing easy integration into Docker-centric workflows.
@@ -88,13 +91,15 @@ pg_restore -d $DB_NAME "$backup_file_name"
 A built-in restore command may be provided in a future
 version of this image.
 
+# Contributing
 
-## Limitations
+Basic backup functionality is fully tested. Tests can be run locally using `make test`.
+All pull requests and commits to the `main` branch
+are automatically tested, and updates to the Docker image are automatically pushed to the Github container registry.
+Any contributions should add appropriate tests and documentation.
+## Limitations and future possibilities
 
 - There is no allowance for backups scheduled at specific
   times of the day.
-
-## Future possibilities
-
 - A built-in command to restore from a backup (possibly with an interactive prompt).
 - Possibly shift to Python from shell scripts.
