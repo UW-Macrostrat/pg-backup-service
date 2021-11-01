@@ -1,0 +1,16 @@
+#!/bin/bash
+
+dbname=${1:-$DB_NAME}
+
+if [ -z "$DB_BACKUP_PREFIX" ]; then
+  run-rclone lsjson remote:$S3_BACKUP_BUCKET \
+  | jq -r '.[] | .Path' \
+  | grep ^$dbname-.*.pg-dump$ \
+  | tr " " "\n"
+else
+  run-rclone lsjson remote:$S3_BACKUP_BUCKET/$DB_BACKUP_PREFIX \
+  | jq -r '.[] | .Path' \
+  | grep ^$dbname-.*.pg-dump$ \
+  | sed 's/^/'$DB_BACKUP_PREFIX'\//' \
+  | tr " " "\n"
+fi

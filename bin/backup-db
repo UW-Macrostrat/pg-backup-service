@@ -54,9 +54,7 @@ if check-vars "cloud backup" \
   dumpfile=${dumpfile:-/tmp/$backup_name}
   remote_dump=$remote/$backup_name
 
-  run-rclone ls $remote | sed 's/.* //g' > $list
-
-  echo "Finding dump"
+  find-remote-backups $dbname > $list
 
   nfiles=$(cat $list | wc -l)
 

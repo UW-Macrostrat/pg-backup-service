@@ -99,9 +99,11 @@ docker compose run db_backup backup-db
 
 run-test "list files using client API"
 
-file_list=$(docker compose run db_backup bash /usr/local/bin/run-rclone lsjson remote:$S3_BACKUP_BUCKET/$DB_BACKUP_PREFIX | jq -r '.[] | .Name')
+echo ""
+file_list=$(docker compose run -T db_backup find-remote-backups)
+echo "$file_list"
 
-n_files=$(echo $file_list | wc -w)
+n_files=$(echo "$file_list" | wc -l)
 echo $n_files
 if (( $n_files != 2 )); then
   echo "Expected 2 file, found $n_files"
