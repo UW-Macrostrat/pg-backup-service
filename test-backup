@@ -8,6 +8,12 @@ export COMPOSE_FILE="docker-compose.test.yaml"
 
 source bin/defs.bash
 
+cleanup=1
+if [ ${1:-""} == "--no-cleanup" ]; then
+  cleanup=0
+  shift
+fi
+
 
 run-test() {
   echo ""
@@ -18,9 +24,11 @@ cleanup() {
   # Clean up resources used in testing
   returncode=$?
   echo ""
-  echo "Cleaning up resources..."
-  docker compose down
-  docker compose rm -f --volumes
+  if (( $cleanup )); then
+    echo "Cleaning up resources..."
+    docker compose down
+    docker compose rm -f --volumes
+  fi
   if (( $returncode )); then
     echo "Tests failed!"
   else
@@ -56,17 +64,18 @@ run-test "basic backup"
 
 docker compose run db_backup backup-db
 
-docker compose exec storage ls /data/test-bucket
+prefix="$DB_BACKUP_PREFIX/$DB_NAME"
+# Independently verify that the file is in the backend
+file_list=$(docker compose exec --workdir /data/$S3_BACKUP_BUCKET storage find . -type f -path ./$prefix-*.pg-dump)
 
-file_list=$(docker compose exec storage ls /data/test-bucket/$DB_BACKUP_PREFIX)
+echo $file_list
 
 # Test that a backup file was created
 if [ -z "$file_list" ]; then
-  echo "No files found in S3 bucket."
+  echo "No matching files found in S3 bucket."
   exit 1
 fi
 
-echo $file_list
 echo "Backup file saved successfully!"
 
 run-test "correct number of backups"
@@ -79,8 +88,7 @@ fi
 
 run-test "correct prefix"
 
-prefix="$DB_BACKUP_PREFIX/$DB_NAME"
-if [[ ! $file_list == "$prefix-"* ]]; then
+if [[ ! $file_list == "./$prefix-"* ]]; then
   echo "Backup file name does not match expected format."
   exit 1
 fi

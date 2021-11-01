@@ -45,12 +45,6 @@ if check-vars "cloud backup" \
   S3_SECRET_KEY \
   S3_BACKUP_BUCKET ; then
 
-  # Set RClone configuration values
-  export RCLONE_CONFIG_REMOTE_TYPE=s3
-  export RCLONE_CONFIG_REMOTE_ENDPOINT=${S3_ENDPOINT}
-  export RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID=${S3_ACCESS_KEY}
-  export RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
-
   echo "Running cloud backup"
 
   remote=remote:$S3_BACKUP_BUCKET
@@ -60,7 +54,7 @@ if check-vars "cloud backup" \
   dumpfile=${dumpfile:-/tmp/$backup_name}
   remote_dump=$remote/$backup_name
 
-  rclone ls $remote | sed 's/.* //g' > $list
+  run-rclone ls $remote | sed 's/.* //g' > $list
 
   echo "Finding dump"
 
@@ -80,14 +74,14 @@ if check-vars "cloud backup" \
   fi
 
   echo "Uploading to $remote_dump"
-  rclone copy $dumpfile $remote
+  run-rclone copy $dumpfile $(dirname $remote_dump)
 
   # Prune oldest backup if there are many
   max_n=${DB_BACKUP_MAX_N:-10}
   if [ $nfiles -gt $max_n ]; then
     echo "More than $max_n backups available."
     echo "Pruning the oldest ($oldest_file)."
-    rclone deletefile $remote/$oldest_file
+    run-rclone deletefile $remote/$oldest_file
   fi
 
   rm -f $list
