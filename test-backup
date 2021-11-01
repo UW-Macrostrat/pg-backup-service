@@ -63,6 +63,10 @@ echo "Created test database"
 run-test "basic backup"
 
 docker compose run db_backup backup-db
+if [ $? -ne 0 ]; then
+  echo "Backup failed!"
+  exit 1
+fi
 
 prefix="$DB_BACKUP_PREFIX/$DB_NAME"
 # Independently verify that the file is in the backend
@@ -96,6 +100,11 @@ fi
 run-test "create another backup"
 
 docker compose run db_backup backup-db
+if [ $? -ne 0 ]; then
+  echo "Backup failed!"
+  exit 1
+fi
+
 
 run-test "list files using client API"
 

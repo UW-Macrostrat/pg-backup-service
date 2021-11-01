@@ -11,19 +11,40 @@ function check-vars() {
   return 0
 }
 
-function _backup_db() {
-  # The core function to backup a database
+function run-backup() {
+  # The core function to back up a database
   dbname="$1"
-  dumpfile="$2"
-  echo "Backing up $dbname to $dumpfile"
-  mkdir -p "$(dirname "$dumpfile")"
-  pg_dump -f $dumpfile $dbname
-  ls -sh $dumpfile
-  echo ""
-}
+  dirname="$2"
+  >&2 echo "Backing up $dbname to $dirname"
+  mkdir -p "$dirname"
 
-# function count-backups() {
-#   # Count the number of backups
-#   dbname="$1"
-#   backup_dir="$2"
-# }
+  dumpfile="/tmp/dumpfile.db-dump"
+  if command -v "dump-$dbname" &> /dev/null ; then
+    >&2 echo "Found a provided 'dump-$dbname' command"
+    >&2 dump-$dbname "$dbname" "$dumpfile"
+  elif command -v dump-database &> /dev/null ; then
+    >&2 echo "Found a provided 'dump-database' command"
+    >&2 dump-database "$dbname" "$dumpfile"
+  else
+    if [ -z $PGDUMP_OPTIONS ]; then
+      >&2 echo "No 'dump-$dbname' or 'dump-database' command found, using pg_dump"
+      >&2 pg_dump -Fc "$dbname" > "$dumpfile"
+    else
+      >&2 echo "No 'dump-$dbname' or 'dump-database' command found, using pg_dump with options $PGDUMP_OPTIONS"
+      >&2 pg_dump -Fc $PGDUMP_OPTIONS "$dbname" > "$dumpfile"
+    fi
+  fi
+
+  if [ ! -f "$dumpfile" ]; then
+    >&2 echo "Failed to create dumpfile"
+    exit 1
+  fi
+
+  hash=$(md5sum $dumpfile | head -c 10)
+  now="$(date +%Y-%m-%d:%H:%M:%S)"
+  outfile="$dirname/${dbname}-${hash}-${now}.pg-dump"
+
+  >&2 mv $dumpfile $outfile
+  >&2 echo "Created $outfile"
+  echo "$outfile"
+}

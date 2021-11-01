@@ -10,12 +10,11 @@ check-vars "for backup" DB_NAME || exit 1
 
 now="$(date +%Y-%m-%d:%H:%M:%S)"
 
-prefix="$DB_NAME"
+backup_dir="$DB_NAME"
 if [ -n "$DB_BACKUP_PREFIX" ]; then
-  prefix="$DB_BACKUP_PREFIX/$DB_NAME"
+  backup_dir="$DB_BACKUP_PREFIX/"
 fi
 
-backup_name="$prefix-$now.pg-dump"
 dbname="$DB_NAME"
 
 # Set defaults for standard PostgreSQL environment variables:
@@ -24,6 +23,7 @@ export PGUSER=${PGUSER:-postgres}
 export PGHOST=${PGHOST:-localhost}
 export PGPORT=${PGPORT:-5432}
 
+dumpfile=""
 did_something=false
 # We mount local DB_BACKUP_DIR as 
 if check-vars "local backup" DB_BACKUP_DIR ; then
@@ -32,8 +32,9 @@ if check-vars "local backup" DB_BACKUP_DIR ; then
   # Add an extra variable to be more specific about the mounted directory 
   export DB_BACKUP_VOLUME=${DB_BACKUP_VOLUME:-"$DB_BACKUP_DIR"}
 
-  dumpfile="$DB_BACKUP_VOLUME/$backup_name"
-  _backup_db $dbname $dumpfile
+  dump_dir="$DB_BACKUP_VOLUME/$backup_dir"
+  dumpfile="$(run-backup $dbname $dump_dir)"
+  [ ! -f "$dumpfile" ] && exit 1
   did_something=true
 fi
 
@@ -51,8 +52,7 @@ if check-vars "cloud backup" \
   list=/tmp/bucket-list
 
 
-  dumpfile=${dumpfile:-/tmp/$backup_name}
-  remote_dump=$remote/$backup_name
+  remote_dump=$remote/$backup_dir
 
   find-remote-backups $dbname > $list
 
@@ -68,11 +68,12 @@ if check-vars "cloud backup" \
 
   # Dump the database if it hasn't already been dumped
   if [ ! -f "$dumpfile" ]; then
-    _backup_db $dbname $dumpfile
+    dumpfile=$(run-backup $dbname /tmp)
   fi
+  [ ! -f "$dumpfile" ] && exit 1
 
   echo "Uploading to $remote_dump"
-  run-rclone copy $dumpfile $(dirname $remote_dump)
+  run-rclone copy $dumpfile $remote_dump
 
   # Prune oldest backup if there are many
   max_n=${DB_BACKUP_MAX_N:-10}
