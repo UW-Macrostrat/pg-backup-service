@@ -4,9 +4,7 @@
 # TODO: we might want to rewrite this in python for clarity and added features.
 # But the current shell version is fine for now.
 
-export COMPOSE_FILE="docker-compose.test.yaml"
-
-source bin/defs.bash
+source ../bin/defs.bash
 
 cleanup=1
 if [ ${1:-""} == "--no-cleanup" ]; then

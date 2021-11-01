@@ -8,7 +8,7 @@ services:
   storage:
     build:
       context: .
-      dockerfile: Dockerfile.minio-test
+      dockerfile: Dockerfile.storage
     entrypoint: ""
     command: bash -c 'mkdir -p /data/test-bucket && minio server /data'
     ports:
@@ -17,7 +17,7 @@ services:
       - MINIO_ACCESS_KEY=test
       - MINIO_SECRET_KEY=test_secret
   db_backup:
-    build: .
+    build: ..
     command: "echo"
     environment:
       - S3_ENDPOINT=http://storage:9000

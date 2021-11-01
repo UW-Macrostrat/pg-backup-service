@@ -6,4 +6,4 @@ build:
 	docker build -t ghcr.io/uw-macrostrat/pg-backup-service .
 
 test:
-	./test-backup
+	cd tests && ./test-backup
