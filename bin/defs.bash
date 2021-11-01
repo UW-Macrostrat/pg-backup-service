@@ -1,14 +1,3 @@
-function find-files() {
-  prefix=$1
-  file_list=$(docker compose exec --workdir /data/$S3_BACKUP_BUCKET storage find . -type f -path ./$prefix-*.pg-dump.gz)
-  # Test that a backup file was created
-  if [ -z "$file_list" ]; then
-    echo "No matching files found in S3 bucket."
-    exit 1
-  fi 
-}
-
-
 function check-vars() {
   # Check whether an environment variable exists
   reason="$1"
@@ -39,10 +28,10 @@ function run-backup() {
   else
     if [ -z $PGDUMP_OPTIONS ]; then
       >&2 echo "No 'dump-$dbname' or 'dump-database' command found, using pg_dump"
-      >&2 pg_dump "$dbname" > "$dumpfile"
+      >&2 pg_dump -Fc "$dbname" > "$dumpfile"
     else
       >&2 echo "No 'dump-$dbname' or 'dump-database' command found, using pg_dump with options $PGDUMP_OPTIONS"
-      >&2 pg_dump $PGDUMP_OPTIONS "$dbname" > "$dumpfile"
+      >&2 pg_dump -Fc $PGDUMP_OPTIONS "$dbname" > "$dumpfile"
     fi
   fi
 

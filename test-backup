@@ -43,9 +43,13 @@ export S3_BACKUP_BUCKET="test-bucket"
 export DB_NAME="test_database"
 export PGPORT=5432
 
+function in-container {
+  docker compose run --rm db_backup $@
+}
+
 function do-backup() {
   # Run a backup and return the exit code
-  docker compose run db_backup backup-db
+  in-container backup-db
   if [ $? -ne 0 ]; then
     echo "Backup failed!"
     exit 1
@@ -67,14 +71,16 @@ function find-files() {
 function check-count() {
   # Check that the number of files in the S3 bucket matches the expected count
   expected_count=$1
-  file_list=$(docker compose run -T db_backup find-remote-backups)
+  file_list=$(in-container find-remote-backups $2)
   echo "$file_list"
   n_files=$(echo "$file_list" | wc -l)
   # Override for empty case
   [ -z "$file_list" ] && n_files=0
   if (( $n_files != $expected_count )); then
-    echo "Expected $expected_count file, found $n_files"
+    echo "Expected $expected_count files, found $n_files"
     exit 1
+  else
+    echo "Found $n_files files"
   fi
 }
 
@@ -107,10 +113,10 @@ check-count 1
 
 run-test "remove last backup"
 
-file_list=$(docker compose run -T db_backup find-remote-backups)
+file_list=$(in-container find-remote-backups)
 last_backup=$(echo "$file_list" | tail -n 1)
 echo $last_backup
-docker compose run db_backup remove-remote-backup $last_backup
+in-container remove-remote-backup $last_backup
 check-count 0
 
 run-test "backup with prefix"
@@ -135,16 +141,27 @@ fi
 
 run-test "create another backup"
 
-docker compose run db_backup backup-db
-if [ $? -ne 0 ]; then
-  echo "Backup failed!"
-  exit 1
-fi
-
-
-run-test "list files using client API"
-
+do-backup
 check-count 2
 
+run-test "search for nonexistent backups"
 
+check-count 0 "this-doesnt-exist"
 
+run-test "backup multiple databases"
+
+new_database="testdb1"
+docker compose exec db_server createdb $new_database
+docker compose exec db_server psql $new_database -c \
+"CREATE TABLE test_table (id serial PRIMARY KEY, name text); \
+INSERT INTO test_table (name) VALUES ('test1');"
+
+echo "Created another test database"
+
+export DB_NAME="$DB_NAME,$new_database"
+
+do-backup
+
+check-count 4
+check-count 3 "test_database"
+check-count 1 $new_database

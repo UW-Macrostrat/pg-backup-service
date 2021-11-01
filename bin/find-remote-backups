@@ -1,15 +1,17 @@
 #!/bin/bash
 
-dbname=${1:-$DB_NAME}
+dbname=${1:-'.*'}
+
+>&2 printf "Searching for remote backups for database '$dbname'\n"
 
 if [ -z "$DB_BACKUP_PREFIX" ]; then
   run-rclone lsjson remote:$S3_BACKUP_BUCKET \
-  | jq -r '.[] | .Path' \
+  | jq -r '.[] | .Name' \
   | grep ^$dbname-.*.pg-dump$ \
   | tr " " "\n"
 else
   run-rclone lsjson remote:$S3_BACKUP_BUCKET/$DB_BACKUP_PREFIX \
-  | jq -r '.[] | .Path' \
+  | jq -r '.[] | .Name' \
   | grep ^$dbname-.*.pg-dump$ \
   | sed 's/^/'$DB_BACKUP_PREFIX'\//' \
   | tr " " "\n"
