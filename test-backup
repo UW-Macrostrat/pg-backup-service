@@ -14,9 +14,16 @@ if [ ${1:-""} == "--no-cleanup" ]; then
   shift
 fi
 
+ntests=0
 run-test() {
   echo ""
-  echo -e "\033[1mTest: $1\033[0m"
+  ntests=$(( ntests + 1 ))
+  printf "\e[0m"
+  tput bold
+  echo "Test $ntests: $1"
+  tput sgr0
+  # Turn to dim
+  printf "\e[2m"
 }
 
 cleanup() {
@@ -29,9 +36,9 @@ cleanup() {
     docker compose rm -f --volumes
   fi
   if (( $returncode )); then
-    echo "Tests failed!"
+    tput setaf 1; echo "Tests failed!"
   else
-    echo "Tests passed!"
+    tput setaf 2; echo "Tests passed!"
   fi
 
   exit $returncode
@@ -40,7 +47,6 @@ cleanup() {
 trap "cleanup" EXIT
 
 export S3_BACKUP_BUCKET="test-bucket"
-export DB_NAME="test_database"
 export PGPORT=5432
 
 function in-container {
@@ -84,7 +90,6 @@ function check-count() {
   fi
 }
 
-
 ## Start testing suite
 
 docker compose up --build --remove-orphans --force-recreate -d
@@ -94,6 +99,19 @@ while ! docker compose exec db_server pg_isready ; do
   sleep 1
 done
 
+run-test "backup without a database name"
+in-container backup-db
+if (( $? == 0 )); then
+  echo "Database was backed up even though it should not be"
+  exit 1
+else
+  echo "failed to back up database"
+fi
+
+run-test "basic backup"
+
+export DB_NAME="test_database"
+
 docker compose exec db_server createdb $DB_NAME
 
 docker compose exec db_server psql $DB_NAME -c \
@@ -101,8 +119,6 @@ docker compose exec db_server psql $DB_NAME -c \
 INSERT INTO test_table (name) VALUES ('test');"
 
 echo "Created test database"
-
-run-test "basic backup"
 
 do-backup
 

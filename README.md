@@ -19,9 +19,13 @@ docker run pg-backup-service backup-db
 with the appropriate environment variables.
 
 ## Environment variables
+
+The application is configured with environment variables, allowing easy integration into Docker-centric workflows.
 ### Database connection
 
-- `DB_NAME`: The name of the database to back up (**Required**).
+#### `DB_NAME` or `PGDATABASE` (**Required**)
+The name of the database to back up to (`DB_NAME` takes precedence)
+With `DB_NAME`, a comma-separated string can be provided to back up multiple databases.
 
 Other common [PostgreSQL connection variables](https://www.postgresql.org/docs/current/libpq-envars.html)
 are also supported, such as:

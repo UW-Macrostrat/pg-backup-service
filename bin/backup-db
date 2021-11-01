@@ -2,6 +2,20 @@
 
 source defs.bash
 
+if [ -z $DB_NAME ] && [ -z $PGDATABASE ] ; then
+  echo "Neither DB_NAME or PGDATABASE is set!"
+  exit 1
+fi
+
+if [ -z $DB_NAME ]; then
+  echo "DB_NAME is not set, falling back to PGDATABASE"
+  if [[ $PGDATABASE =~ "," ]]; then
+    echo "PGDATABASE cannot be set to a comma-delimited list!"
+    exit 1
+  fi
+  export DB_NAME=$PGDATABASE
+fi
+
 check-vars "for backup" DB_NAME || exit 1
 
 backup_dir=""
@@ -17,6 +31,8 @@ export PGPORT=${PGPORT:-5432}
 
 databases=$(echo $DB_NAME | tr "," "\n")
 for dbname in $databases ; do
+  # Set postgres environment variables
+  export PGDATABASE=$dbname
   dumpfile=""
   did_something=false
   # We mount local DB_BACKUP_DIR as 
