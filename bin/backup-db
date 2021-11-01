@@ -11,8 +11,8 @@ check-vars "for backup" DB_NAME || exit 1
 now="$(date +%Y-%m-%d:%H:%M:%S)"
 
 prefix="$DB_NAME"
-if [ -n "$BACKUP_PREFIX" ]; then
-  prefix="$BACKUP_PREFIX-$DB_NAME"
+if [ -n "$DB_BACKUP_PREFIX" ]; then
+  prefix="$DB_BACKUP_PREFIX-$DB_NAME"
 fi
 
 backup_name="$prefix-$now.pg-dump"

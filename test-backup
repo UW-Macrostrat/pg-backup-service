@@ -5,7 +5,27 @@
 # But the current shell version is fine for now.
 
 export COMPOSE_FILE="docker-compose.test.yaml"
+
+cleanup() {
+  # Clean up resources used in testing
+  returncode=$?
+  docker compose down
+  docker compose rm -f --volumes
+  if (( $returncode )); then
+    echo "Tests failed!"
+  else
+    echo "Tests passed!"
+  fi
+
+  exit $returncode
+}
+
+trap "cleanup" EXIT
+
 export S3_BACKUP_BUCKET="test-bucket"
+export DB_BACKUP_PREFIX="test-backup"
+export DB_NAME="test_database"
+export PGPORT=5432
 
 docker compose up --build --remove-orphans --force-recreate -d
 
@@ -14,9 +34,9 @@ while ! docker compose exec db_server pg_isready ; do
   sleep 1
 done
 
-docker compose exec db_server createdb test_database
+docker compose exec db_server createdb $DB_NAME
 
-docker compose exec db_server psql -p 5432 test_database -c \
+docker compose exec db_server psql $DB_NAME -c \
 "CREATE TABLE test_table (id serial PRIMARY KEY, name text); \
 INSERT INTO test_table (name) VALUES ('test');"
 
@@ -28,21 +48,12 @@ docker compose run db_backup backup-db
 
 file_list=$(docker compose exec storage ls /data/test-bucket)
 
-docker compose down
-docker compose rm -f --volumes
-
-exit_status=0
+# Test that a backup file was created
 if [ -z "$file_list" ]; then
   echo "No files found in S3 bucket."
-  exit_status=1
-else
-  echo $file_list
-  echo "Backup file saved successfully!"
+  exit 1
 fi
 
-if (( $exit_status )); then
-  echo "Tests failed!"
-  exit $exit_status
-else
-  echo "Tests passed!"
-fi
+echo $file_list
+echo "Backup file saved successfully!"
+
