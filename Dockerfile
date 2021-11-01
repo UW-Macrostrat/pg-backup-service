@@ -1,6 +1,6 @@
 FROM rclone/rclone
 
-RUN apk --update add --no-cache postgresql-client bash
+RUN apk --update add --no-cache postgresql-client bash jq
 
 COPY ./bin/* /usr/local/bin/
 

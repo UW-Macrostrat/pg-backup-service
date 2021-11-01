@@ -93,3 +93,20 @@ if [[ ! $file_list == "./$prefix-"* ]]; then
   exit 1
 fi
 
+run-test "create another backup"
+
+docker compose run db_backup backup-db
+
+run-test "list files using client API"
+
+file_list=$(docker compose run db_backup bash /usr/local/bin/run-rclone lsjson remote:$S3_BACKUP_BUCKET/$DB_BACKUP_PREFIX | jq -r '.[] | .Name')
+
+n_files=$(echo $file_list | wc -w)
+echo $n_files
+if (( $n_files != 2 )); then
+  echo "Expected 2 file, found $n_files"
+  exit 1
+fi
+
+
+
