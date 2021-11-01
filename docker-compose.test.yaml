@@ -23,4 +23,4 @@ services:
       - S3_SECRET_KEY=test_secret
       - S3_BACKUP_BUCKET
       - DB_NAME=test_database
-      - DB_HOST=db_server
+      - PGHOST=db_server
