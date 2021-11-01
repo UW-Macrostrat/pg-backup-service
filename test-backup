@@ -5,7 +5,92 @@
 # But the current shell version is fine for now.
 
 export COMPOSE_FILE="docker-compose.test.yaml"
+
+source bin/defs.bash
+
+cleanup=1
+if [ ${1:-""} == "--no-cleanup" ]; then
+  cleanup=0
+  shift
+fi
+
+ntests=0
+run-test() {
+  echo ""
+  ntests=$(( ntests + 1 ))
+  printf "\e[0m"
+  tput bold
+  echo "Test $ntests: $1"
+  tput sgr0
+  # Turn to dim
+  printf "\e[2m"
+}
+
+cleanup() {
+  # Clean up resources used in testing
+  returncode=$?
+  echo ""
+  if (( $cleanup )); then
+    echo "Cleaning up resources..."
+    docker compose down
+    docker compose rm -f --volumes
+  fi
+  if (( $returncode )); then
+    tput setaf 1; echo "Tests failed!"
+  else
+    tput setaf 2; echo "Tests passed!"
+  fi
+
+  exit $returncode
+}
+
+trap "cleanup" EXIT
+
 export S3_BACKUP_BUCKET="test-bucket"
+export PGPORT=5432
+
+function in-container {
+  docker compose run --rm db_backup $@
+}
+
+function do-backup() {
+  # Run a backup and return the exit code
+  in-container backup-db
+  if [ $? -ne 0 ]; then
+    echo "Backup failed!"
+    exit 1
+  fi
+}
+
+function find-files() {
+  prefix=$1
+  file_list=$(docker compose exec --workdir /data/$S3_BACKUP_BUCKET storage find . -type f -path ./$prefix-*.pg-dump)
+  echo $file_list
+  # Test that a backup file was created
+  if [ -z "$file_list" ]; then
+    echo "No matching files found in S3 bucket."
+    exit 1
+  fi
+  echo $file_list
+}
+
+function check-count() {
+  # Check that the number of files in the S3 bucket matches the expected count
+  expected_count=$1
+  file_list=$(in-container find-remote-backups $2)
+  echo "$file_list"
+  n_files=$(echo "$file_list" | wc -l)
+  # Override for empty case
+  [ -z "$file_list" ] && n_files=0
+  if (( $n_files != $expected_count )); then
+    echo "Expected $expected_count files, found $n_files"
+    exit 1
+  else
+    echo "Found $n_files files"
+  fi
+}
+
+## Start testing suite
 
 docker compose up --build --remove-orphans --force-recreate -d
 
@@ -14,35 +99,85 @@ while ! docker compose exec db_server pg_isready ; do
   sleep 1
 done
 
-docker compose exec db_server createdb test_database
+run-test "backup without a database name"
+in-container backup-db
+if (( $? == 0 )); then
+  echo "Database was backed up even though it should not be"
+  exit 1
+else
+  echo "failed to back up database"
+fi
 
-docker compose exec db_server psql -p 5432 test_database -c \
+run-test "basic backup"
+
+export DB_NAME="test_database"
+
+docker compose exec db_server createdb $DB_NAME
+
+docker compose exec db_server psql $DB_NAME -c \
 "CREATE TABLE test_table (id serial PRIMARY KEY, name text); \
 INSERT INTO test_table (name) VALUES ('test');"
 
 echo "Created test database"
 
-echo "-> Testing basic backup"
+do-backup
 
-docker compose run db_backup backup-db
+prefix="$DB_NAME"
 
-file_list=$(docker compose exec storage ls /data/test-bucket)
+file_list=$(find-files $prefix)
+check-count 1
 
-docker compose down
-docker compose rm -f --volumes
+run-test "remove last backup"
 
-exit_status=0
-if [ -z "$file_list" ]; then
-  echo "No files found in S3 bucket."
-  exit_status=1
-else
-  echo $file_list
-  echo "Backup file saved successfully!"
+file_list=$(in-container find-remote-backups)
+last_backup=$(echo "$file_list" | tail -n 1)
+echo $last_backup
+in-container remove-remote-backup $last_backup
+check-count 0
+
+run-test "backup with prefix"
+
+export DB_BACKUP_PREFIX="test-backup"
+prefix="$DB_BACKUP_PREFIX/$DB_NAME"
+
+do-backup
+
+# Independently verify that the file is in the backend
+file_list=$(find-files $prefix)
+
+check-count 1
+
+run-test "correct prefix"
+
+echo "$file_list"
+if [[ ! $file_list == "$prefix-"* ]]; then
+  echo "Backup file name does not match expected format."
+  exit 1
 fi
 
-if (( $exit_status )); then
-  echo "Tests failed!"
-  exit $exit_status
-else
-  echo "Tests passed!"
-fi
+run-test "create another backup"
+
+do-backup
+check-count 2
+
+run-test "search for nonexistent backups"
+
+check-count 0 "this-doesnt-exist"
+
+run-test "backup multiple databases"
+
+new_database="testdb1"
+docker compose exec db_server createdb $new_database
+docker compose exec db_server psql $new_database -c \
+"CREATE TABLE test_table (id serial PRIMARY KEY, name text); \
+INSERT INTO test_table (name) VALUES ('test1');"
+
+echo "Created another test database"
+
+export DB_NAME="$DB_NAME,$new_database"
+
+do-backup
+
+check-count 4
+check-count 3 "test_database"
+check-count 1 $new_database

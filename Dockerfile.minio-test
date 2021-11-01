@@ -1,0 +1,3 @@
+FROM minio/minio
+
+RUN microdnf install findutils
