@@ -6,9 +6,16 @@
 
 export COMPOSE_FILE="docker-compose.test.yaml"
 
+run-test() {
+  echo ""
+  echo -e "\033[1mTesting $1\033[0m"
+}
+
 cleanup() {
   # Clean up resources used in testing
   returncode=$?
+  echo ""
+  echo "Cleaning up resources..."
   docker compose down
   docker compose rm -f --volumes
   if (( $returncode )); then
@@ -42,7 +49,7 @@ INSERT INTO test_table (name) VALUES ('test');"
 
 echo "Created test database"
 
-echo "-> Testing basic backup"
+run-test "basic backup"
 
 docker compose run db_backup backup-db
 
@@ -56,4 +63,20 @@ fi
 
 echo $file_list
 echo "Backup file saved successfully!"
+
+run-test "correct number of backups"
+
+n_files=$(echo $file_list | wc -l)
+if (( $n_files != 1 )); then
+  echo "Expected 1 file, found $n_files"
+  exit 1
+fi
+
+run-test "correct prefix"
+
+prefix="$DB_BACKUP_PREFIX-$DB_NAME"
+if [[ ! $file_list == "$prefix-"* ]]; then
+  echo "Backup file name does not match expected format."
+  exit 1
+fi
 
