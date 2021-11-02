@@ -4,7 +4,7 @@ set -eo pipefail
 
 if [ -z "${SCHEDULE}" ]; then
   echo "SCHEDULE environment variable is not set"
-  echo "Performing a one-off backup"
+  echo "Performing a one-time backup"
   backup-db
 else
   exec go-cron "$SCHEDULE" backup-db
