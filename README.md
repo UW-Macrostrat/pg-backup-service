@@ -128,7 +128,7 @@ services:
       # Back up every weekend
       - SCHEDULE=@weekly
       - PGHOST=db_server
-      - PGPASSWORD=<your-password>>
+      - PGPASSWORD=<your-password>
       - DB_BACKUP_PREFIX=strata-v1
       # Can set multiple databases for backup!!
       - DB_NAME=strata-main,strata-dev
