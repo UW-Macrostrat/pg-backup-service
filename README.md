@@ -22,7 +22,7 @@ with the appropriate environment variables.
 
 Backups are named using an optional prefix, the database name, a 10-character file hash, and a timestamp, as such:
 ```
-$DB_BACKUP_PREFIX/$dbname-5e753082e5-2021-11-01:20:51:55.pg-dump
+$DB_BACKUP_PREFIX/$dbname-5e753082e5-2021-11-01T20:51:55.pg-dump
 ```
 
 ## Prior art and useful links
@@ -144,9 +144,8 @@ Basic backup functionality is fully tested. Tests can be run locally using `make
 All pull requests and commits to the `main` branch
 are automatically tested, and updates to the Docker image are automatically pushed to the Github container registry.
 Any contributions should add appropriate tests and documentation.
-## Limitations and future possibilities
 
-- There is no allowance for backups scheduled at specific
-  times of the day.
+## Future possibilities
+
 - A built-in command to restore from a backup (possibly with an interactive prompt).
 - Possibly shift to Python from shell scripts.
