@@ -41,7 +41,7 @@ function run-backup() {
   fi
 
   hash=$(md5sum $dumpfile | head -c 10)
-  now="$(date +%Y-%m-%d:%H:%M:%S)"
+  now="$(date +%Y-%m-%dT%H:%M:%S)"
   outfile="$dirname/${dbname}-${hash}-${now}.pg-dump"
 
   >&2 mv $dumpfile $outfile
