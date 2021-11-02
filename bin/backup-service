@@ -7,5 +7,5 @@ if [ -z "${SCHEDULE}" ]; then
   echo "Performing a one-time backup"
   backup-db
 else
-  exec go-cron "$SCHEDULE" backup-db
+  exec go-cron -s "$SCHEDULE" -- backup-db
 fi
