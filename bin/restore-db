@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+dbname=$1
+if [ -z "$dbname" ]; then
+  dbname=${DB_NAME:-$PGDATABASE}
+fi
+
+if [[ $dbname =~ "," ]]; then
+  echo "Passing a comma-delimited list to restore-db is not presently supported."
+  exit 1
+fi
+
+backups=$(find-remote-backups)
+echo $backups
