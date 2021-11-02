@@ -88,7 +88,7 @@ for dbname in $databases ; do
     [ ! -f "$dumpfile" ] && exit 1
 
     echo "Uploading to $remote_dump"
-    run-rclone copy $dumpfile $remote_dump
+    rclone copy $dumpfile $remote_dump
 
     # Prune oldest backup if there are many
     max_n=${DB_BACKUP_MAX_N:-10}

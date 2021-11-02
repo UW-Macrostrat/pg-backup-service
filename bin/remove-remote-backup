@@ -1,2 +1,2 @@
 #!/bin/sh
-run-rclone deletefile remote:$S3_BACKUP_BUCKET/$1
+rclone deletefile remote:$S3_BACKUP_BUCKET/$1
