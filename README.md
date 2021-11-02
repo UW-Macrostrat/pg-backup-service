@@ -25,7 +25,18 @@ Backups are named using an optional prefix, the database name, a 10-character fi
 $DB_BACKUP_PREFIX/$dbname-5e753082e5-2021-11-01:20:51:55.pg-dump
 ```
 
+## Prior art and useful links
+
+- [Sparrow](https://sparrow-data.org)
+- [pg_dump](https://www.postgresql.org/docs/current/app-pgdump.html)
+- [Rclone](https://rclone.org)
+- [`postgres-backup-s3`](https://github.com/schickling/dockerfiles/tree/master/postgres-backup-s3)
+
+This project is useful for low-intensity applications, but for
+larger-scale systems, using an incremental/streaming backup system like [Barman](https://pgbarman.org/) or [PGBackRest](https://pgbackrest.org/) is recommended.
+
 # Usage
+
 ## Environment variables
 
 The application is configured with environment variables, allowing easy integration into Docker-centric workflows.
@@ -66,12 +77,22 @@ docker run \
   --volume /local-backups:/db-backups \
   pg-backup-service
 ```
+
+### Scheduling backups
+
+Backups are scheduled using the go-cron library; the schedule
+is set by the `SCHEDULE` environment variable. Schedules can be
+set to a crontab-style format, or more appealingly, a simple format: `@daily`, `@hourly`, `@weekly`, `@every 100s` etc.
+See the [`go-cron` documentation](https://pkg.go.dev/github.com/robfig/cron?utm_source=godoc#hdr-Predefined_schedules) for more information. 
+
+By default, no schedule is applied, and a single backup is
+performed on startup.
+
 ### Miscellaneous
 
 - `DB_BACKUP_PREFIX`: A prefix for database backups. If provided, all backups will be put within
   a specific namespace or folder. This is useful for sharing a bucket between many different database backup jobs.
 - `DB_BACKUP_MAX_N`: the maximum number of backups to keep (default: `10`)
-- `DB_BACKUP_INTERVAL`: the interval in seconds between database backups (default: `604800`, or 1 week)
 - `PGDUMP_OPTIONS`: additional options to pass to `pg_dump` for all backup jobs.
 
 ## Further customization
@@ -91,6 +112,32 @@ pg_restore -d $DB_NAME "$backup_file_name"
 A built-in restore command may be provided in a future
 version of this image.
 
+## Integrating into an application
+
+This container can be easily included in `docker compose`
+container stacks.
+
+```yaml
+services:
+  db_server:
+    image: postgis:13-3.1
+    ...
+  db_backup:
+    image: ghcr.io/macrostrat/pg-backup-service:main
+    environment:
+      # Back up every weekend
+      - SCHEDULE=@weekly
+      - PGHOST=db_server
+      - PGPASSWORD=<your-password>>
+      - DB_BACKUP_PREFIX=strata-v1
+      # Can set multiple databases for backup!!
+      - DB_NAME=strata-main,strata-dev
+      # S3 configuration parameters
+      - S3_ENDPOINT=s3.drive.wisc.edu
+      - S3_ACCESS_KEY
+      - S3_SECRET_KEY
+      - S3_BACKUP_BUCKET=database-backups
+```
 # Contributing
 
 Basic backup functionality is fully tested. Tests can be run locally using `make test`.

@@ -29,6 +29,11 @@ export PGUSER=${PGUSER:-postgres}
 export PGHOST=${PGHOST:-localhost}
 export PGPORT=${PGPORT:-5432}
 
+while ! pg_isready ; do
+  echo "Waiting for PostgreSQL server to be ready..."
+  sleep 1
+done
+
 databases=$(echo $DB_NAME | tr "," "\n")
 for dbname in $databases ; do
   # Set postgres environment variables

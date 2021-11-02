@@ -179,3 +179,11 @@ do-backup
 check-count 4
 check-count 3 "test_database"
 check-count 1 $new_database
+
+run-test "check if the scheduler is available"
+
+in-container which go-cron
+if (( $? != 0 )); then
+  echo "go-cron not found!"
+  exit 1
+fi
