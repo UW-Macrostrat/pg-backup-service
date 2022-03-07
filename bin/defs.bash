@@ -42,7 +42,8 @@ function run-backup() {
 
   hash=$(md5sum $dumpfile | head -c 10)
   now="$(date +%Y-%m-%dT%H:%M:%S)"
-  outfile="$dirname/${dbname}-${hash}-${now}.pg-dump"
+  # The final filename for the database dump
+  outfile="$dirname/${dbname}-${now}-${hash}.pg-dump"
 
   >&2 mv $dumpfile $outfile
   >&2 echo "Created $outfile"
