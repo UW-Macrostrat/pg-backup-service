@@ -1,4 +1,4 @@
-FROM rclone/rclone
+FROM rclone/rclone:1.56
 
 RUN apk --update add --no-cache postgresql-client bash jq curl
 # install go-cron
