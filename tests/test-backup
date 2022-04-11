@@ -48,7 +48,7 @@ export S3_BACKUP_BUCKET="test-bucket"
 export PGPORT=5432
 
 function in-container {
-  docker compose run --rm db_backup $@
+  docker compose run --rm -T db_backup $@
 }
 
 function do-backup() {
@@ -62,7 +62,7 @@ function do-backup() {
 
 function find-files() {
   prefix=$1
-  file_list=$(docker compose exec --workdir /data/$S3_BACKUP_BUCKET storage find . -type f -path ./$prefix-*.pg-dump)
+  file_list=$(docker compose exec -T --workdir /data/$S3_BACKUP_BUCKET storage find . -type f -path ./$prefix-*.pg-dump)
   echo $file_list
   # Test that a backup file was created
   if [ -z "$file_list" ]; then
@@ -78,7 +78,7 @@ function check-count() {
   file_list=$(in-container find-remote-backups $2)
   echo "$file_list"
   # We use head to remove the last character because we seem to sometimes get a trailing newline
-  n_files=$(echo "$file_list" | head -c -1 | wc -l)
+  n_files=$(echo "$file_list" | wc -l)
   # Override for empty case
   [ -z "$file_list" ] && n_files=0
   if (( $n_files != $expected_count )); then
@@ -151,6 +151,7 @@ check-count 1
 run-test "correct prefix"
 
 echo "$file_list"
+echo "Backups should start with $prefix-"
 if [[ ! $file_list == "$prefix-"* ]]; then
   echo "Backup file name does not match expected format."
   exit 1
