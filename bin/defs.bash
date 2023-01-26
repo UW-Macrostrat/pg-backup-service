@@ -18,7 +18,12 @@ function run-backup() {
   >&2 echo "Backing up $dbname to $dirname"
   mkdir -p "$dirname"
 
-  dumpfile="/tmp/dumpfile.db-dump"
+  # Get a random hash to start.
+  # Eventually we will convert this to a filename hash
+  hash=$(echo $RANDOM | md5sum | head -c 10)
+  now="$(date +%Y-%m-%dT%H:%M:%S)"
+
+  dumpfile="$dirname/${dbname}-${now}-${hash}.in-progress.pg-dump"
   if command -v "dump-$dbname" &> /dev/null ; then
     >&2 echo "Found a provided 'dump-$dbname' command"
     >&2 dump-$dbname "$dbname" "$dumpfile"
@@ -41,7 +46,6 @@ function run-backup() {
   fi
 
   hash=$(md5sum $dumpfile | head -c 10)
-  now="$(date +%Y-%m-%dT%H:%M:%S)"
   # The final filename for the database dump
   outfile="$dirname/${dbname}-${now}-${hash}.pg-dump"
 
